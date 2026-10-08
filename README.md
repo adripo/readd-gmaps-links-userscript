@@ -1,5 +1,9 @@
 # Re-introduce Google Maps Links — Violentmonkey Userscript
 
+<p align="center">
+  <img src="assets/icon.png" width="96" height="96" alt="Re-introduce Google Maps Links Icon" />
+</p>
+
 This is the Violentmonkey userscript version of the [Re-introduce Google Maps Links to Search Page](https://github.com/mrakowski0/readd-gmaps-links-chrome-extension) Chrome extension.
 
 ## Installation
