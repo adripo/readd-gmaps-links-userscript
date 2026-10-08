@@ -355,7 +355,7 @@
 
         const mapSpan = document.createElement('span');
         mapSpan.classList.add('R1QWuf');
-        mapSpan.textContent = 'Open in Maps';
+        mapSpan.textContent = 'Maps';
 
         innerDiv.appendChild(mapSpan);
         tabsButton.appendChild(innerDiv);
@@ -540,7 +540,7 @@
         ];
 
         const featureOptions = [
-            ['showMapsTab', 'Show "Open in Maps" tab'],
+            ['showMapsTab', 'Show "Maps" tab'],
             ['showBubbleButton', 'Show round "Maps" bubble button'],
             ['makeThumbnailClickable', 'Make small map thumbnail clickable'],
             ['makeAddressMapClickable', 'Make address map clickable'],
