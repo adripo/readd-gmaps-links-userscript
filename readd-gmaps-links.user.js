@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Re-introduce Google Maps Links to Search Page
 // @namespace    https://github.com/adripo/readd-gmaps-links-userscript
-// @version      1.0.11
+// @version      1.1.0
 // @description  Readds Google Maps link to the search page and makes map thumbnail clickable. Configurable position.
 // @author       adripo
 // @match        *://*.google.com/*
@@ -195,11 +195,28 @@
 // @grant        GM_getValue
 // @grant        GM_setValue
 // @grant        GM_registerMenuCommand
-// @run-at       document-idle
+// @run-at       document-start
 // ==/UserScript==
 
 (function () {
     'use strict';
+
+    function isGoogleSearchPage() {
+        const hostname = window.location.hostname;
+        const pathname = window.location.pathname;
+
+        // Skip non-search Google services
+        if (/^(?:mail|drive|docs|calendar|photos|play|news|workspace|contacts|keep|hangouts|meet|chat)\.google\./i.test(hostname)) {
+            return false;
+        }
+
+        // Search pages, webhp, or root
+        return pathname === '/' || pathname.startsWith('/search') || pathname.startsWith('/webhp');
+    }
+
+    if (!isGoogleSearchPage()) {
+        return;
+    }
 
     const DEFAULTS = {
         overlayPosition: 'bottom-center',
@@ -353,15 +370,32 @@
         }
     `);
 
+    function getSearchQuery() {
+        const urlParams = new URLSearchParams(window.location.search);
+        let q = urlParams.get('q');
+        if (!q) {
+            const input = document.querySelector('textarea[name="q"], input[name="q"]');
+            if (input && input.value) {
+                q = input.value;
+            }
+        }
+        return q || '';
+    }
+
     function buildMapsLink() {
-        const searchQuery = new URLSearchParams(window.location.search).get('q');
-        const currentUrl = new URL(window.location);
+        const query = getSearchQuery();
+        const currentUrl = new URL(window.location.href);
         const hostname = currentUrl.hostname;
         const mapsHostname = hostname.startsWith('www.') ? hostname.replace('www.', 'maps.') : `maps.${hostname}`;
-        return `${currentUrl.protocol}//${mapsHostname}/maps?q=${searchQuery}`;
+        const mapsUrl = new URL(`${currentUrl.protocol}//${mapsHostname}/maps`);
+        if (query) {
+            mapsUrl.searchParams.set('q', query);
+        }
+        return mapsUrl.toString();
     }
 
     function hasMapTabAlreadyDisplayed(tabsContainer) {
+        if (tabsContainer.querySelector('[data-gmaps-link="tab"]')) return true;
         const links = tabsContainer.getElementsByTagName('a');
         for (let i = 0; i < links.length; i++) {
             if (links[i].href.includes('/maps')) {
@@ -374,26 +408,28 @@
     function addMapsTab(config) {
         if (!config.showMapsTab) return false;
 
-        const tabsContainer = document.querySelector('.beZ0tf');
+        const tabsContainer = document.querySelector('.beZ0tf, div[role="navigation"] [role="list"], #hdtb-sc .hdtb-mbs, #hdtb-ms');
         if (!tabsContainer || hasMapTabAlreadyDisplayed(tabsContainer)) return false;
 
         const tabButtonWrapper = document.createElement('div');
         tabButtonWrapper.role = 'listitem';
+        tabButtonWrapper.setAttribute('data-gmaps-link-wrapper', 'tab');
+
         const tabsButton = document.createElement('a');
+        tabsButton.setAttribute('data-gmaps-link', 'tab');
+        tabsButton.classList.add('C6AK7c', 'remove-text-underline');
+        tabsButton.href = buildMapsLink();
+
+        const innerDiv = document.createElement('div');
+        innerDiv.classList.add('mXwfNd');
 
         const mapSpan = document.createElement('span');
         mapSpan.classList.add('R1QWuf');
         mapSpan.textContent = 'Open in Maps';
 
-        const innerDiv = document.createElement('div');
-        innerDiv.classList.add('mXwfNd');
         innerDiv.appendChild(mapSpan);
-
-        tabsButton.classList.add('C6AK7c');
-        tabButtonWrapper.appendChild(tabsButton);
         tabsButton.appendChild(innerDiv);
-        tabsButton.href = buildMapsLink();
-        tabsButton.classList.add('remove-text-underline');
+        tabButtonWrapper.appendChild(tabsButton);
 
         const children = tabsContainer.children;
         const insertIndex = Math.min(config.tabPosition - 1, children.length);
@@ -408,24 +444,25 @@
     function addBubbleButton(config, alreadyAdded) {
         if (!config.showBubbleButton || alreadyAdded) return;
 
-        const buttonContainer = document.querySelector('.IUOThf');
-        if (!buttonContainer) return;
+        const buttonContainer = document.querySelector('.IUOThf, .crJ18e, div[role="navigation"] .O679Sc');
+        if (!buttonContainer || buttonContainer.querySelector('[data-gmaps-link="bubble"]')) return;
 
         const mapsButton = document.createElement('a');
+        mapsButton.setAttribute('data-gmaps-link', 'bubble');
         mapsButton.classList.add('nPDzT', 'T3FoJb');
+        mapsButton.href = buildMapsLink();
 
         const mapDiv = document.createElement('div');
-        mapDiv.jsname = 'bVqjv';
+        mapDiv.setAttribute('jsname', 'bVqjv');
         mapDiv.classList.add('GKS7s');
 
         const mapSpan = document.createElement('span');
         mapSpan.classList.add('FMKtTb', 'UqcIvb');
-        mapSpan.jsname = 'pIvPIe';
+        mapSpan.setAttribute('jsname', 'pIvPIe');
         mapSpan.textContent = 'Maps';
 
         mapDiv.appendChild(mapSpan);
         mapsButton.appendChild(mapDiv);
-        mapsButton.href = buildMapsLink();
 
         if (config.bubblePosition === 'append') {
             buttonContainer.appendChild(mapsButton);
@@ -437,51 +474,80 @@
     function makeThumbnailClickable(config) {
         if (!config.makeThumbnailClickable) return;
 
-        const smallMapThumbnailElement = ['.lu-fs', '.V1GY4c'];
-        setTimeout(() => {
-            smallMapThumbnailElement.forEach((elementSelector) => {
-                const targettedElement = document.querySelector(elementSelector);
-                if (targettedElement) {
-                    if (targettedElement.parentNode.tagName.toLowerCase() === 'a') {
-                        targettedElement.parentNode.href = buildMapsLink();
-                    } else {
-                        const wrapperLink = document.createElement('a');
-                        wrapperLink.href = buildMapsLink();
-                        targettedElement.parentNode.insertBefore(wrapperLink, targettedElement);
-                        targettedElement.parentNode.removeChild(targettedElement);
-                        wrapperLink.appendChild(targettedElement);
-                    }
+        const smallMapThumbnailSelectors = [
+            '.lu-fs',
+            '.V1GY4c',
+            '[data-attrid*="image:map"]',
+            '[data-hveid] img[src*="google.com/maps"]'
+        ];
+
+        for (const selector of smallMapThumbnailSelectors) {
+            const elements = document.querySelectorAll(selector);
+            elements.forEach((element) => {
+                if (element.dataset.gmapsProcessed) return;
+
+                const parentAnchor = element.closest('a');
+                if (parentAnchor) {
+                    parentAnchor.href = buildMapsLink();
+                    parentAnchor.setAttribute('data-gmaps-link', 'thumbnail');
+                } else if (element.parentNode) {
+                    const wrapperLink = document.createElement('a');
+                    wrapperLink.href = buildMapsLink();
+                    wrapperLink.setAttribute('data-gmaps-link', 'thumbnail');
+                    element.parentNode.insertBefore(wrapperLink, element);
+                    wrapperLink.appendChild(element);
                 }
+                element.dataset.gmapsProcessed = 'true';
             });
-        }, 0);
+        }
     }
 
     function addOverlayButton(config, container) {
-        if (!container) return;
+        if (!container || container.querySelector('[data-gmaps-link="overlay"]')) return;
 
         const mapWrapperLinkEl = document.createElement('a');
         mapWrapperLinkEl.textContent = 'Open in Maps';
         mapWrapperLinkEl.classList.add('open-in-maps-extension-button');
+        mapWrapperLinkEl.setAttribute('data-gmaps-link', 'overlay');
         mapWrapperLinkEl.href = buildMapsLink();
 
         container.style.position = 'relative';
         mapWrapperLinkEl.style.cssText = getPositionStyles(config.overlayPosition);
 
         container.appendChild(mapWrapperLinkEl);
-        setTimeout(() => {
+        requestAnimationFrame(() => {
             mapWrapperLinkEl.style.opacity = '1';
-        }, 100);
+        });
     }
 
-    function init() {
-        const config = getConfig();
+    function updateAllMapLinks() {
+        const link = buildMapsLink();
+        document.querySelectorAll('a[data-gmaps-link]').forEach((el) => {
+            el.href = link;
+        });
+    }
 
-        let alreadyAdded = addMapsTab(config);
+    function hookHistoryEvents(callback) {
+        const wrapMethod = (name) => {
+            const original = history[name];
+            return function (...args) {
+                const result = original.apply(this, args);
+                callback();
+                return result;
+            };
+        };
+        history.pushState = wrapMethod('pushState');
+        history.replaceState = wrapMethod('replaceState');
+        window.addEventListener('popstate', callback);
+    }
+
+    function applyAll(config) {
+        const alreadyAdded = addMapsTab(config);
         addBubbleButton(config, alreadyAdded);
         makeThumbnailClickable(config);
 
         if (config.makeAddressMapClickable) {
-            addOverlayButton(config, document.querySelector('.lu_map_section'));
+            addOverlayButton(config, document.querySelector('.lu_map_section, [data-attrid="kc:/location/location:map"]'));
         }
         if (config.makePlacesMapClickable) {
             addOverlayButton(config, document.querySelector('.S7dMR'));
@@ -489,6 +555,40 @@
         if (config.makeCountryMapClickable) {
             addOverlayButton(config, document.querySelector('.zMVLkf'));
         }
+    }
+
+    function init() {
+        const config = getConfig();
+
+        // Immediate application
+        applyAll(config);
+
+        // Continuous DOM observer to inject elements on-the-fly before first paint
+        let rafId = null;
+        const observer = new MutationObserver(() => {
+            if (rafId) return;
+            rafId = requestAnimationFrame(() => {
+                applyAll(config);
+                rafId = null;
+            });
+        });
+
+        observer.observe(document.documentElement || document, {
+            childList: true,
+            subtree: true
+        });
+
+        // Listen for SPA navigation and query updates
+        hookHistoryEvents(() => {
+            updateAllMapLinks();
+            applyAll(config);
+        });
+
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                applyAll(config);
+            }, 1000);
+        });
     }
 
     function openSettings() {
@@ -594,9 +694,5 @@
 
     GM_registerMenuCommand('Configure Google Maps Links', openSettings);
 
-    if (document.readyState === 'complete' || document.readyState === 'interactive') {
-        setTimeout(init, 250);
-    } else {
-        window.addEventListener('DOMContentLoaded', () => setTimeout(init, 250));
-    }
+    init();
 })();
