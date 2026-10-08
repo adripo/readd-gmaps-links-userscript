@@ -1,0 +1,77 @@
+name: Release Userscript
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate userscript header
+        run: |
+          FILE="userscript/readd-gmaps-links.user.js"
+          if [ ! -f "$FILE" ]; then
+            echo "ERROR: $FILE not found"
+            exit 1
+          fi
+
+          echo "Checking required metadata fields..."
+          for field in "@name" "@namespace" "@version" "@description" "@match" "@grant" "@run-at"; do
+            if ! grep -q "$field" "$FILE"; then
+              echo "ERROR: Missing required field: $field"
+              exit 1
+            fi
+            echo "  OK: $field"
+          done
+
+          echo "Checking @version matches tag..."
+          TAG_VERSION="${GITHUB_REF#refs/tags/v}"
+          SCRIPT_VERSION=$(grep '@version' "$FILE" | head -1 | sed 's/.*@version[[:space:]]*//' | tr -d '[:space:]')
+          if [ "$TAG_VERSION" != "$SCRIPT_VERSION" ]; then
+            echo "ERROR: Tag version ($TAG_VERSION) does not match script version ($SCRIPT_VERSION)"
+            exit 1
+          fi
+          echo "  OK: version $SCRIPT_VERSION matches tag"
+
+          echo "All validations passed."
+
+  build:
+    runs-on: ubuntu-latest
+    needs: validate
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Copy userscript to release artifact
+        run: |
+          cp userscript/readd-gmaps-links.user.js readd-gmaps-links.user.js
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: readd-gmaps-links-user-js
+          path: readd-gmaps-links.user.js
+
+  release:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: readd-gmaps-links-user-js
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: readd-gmaps-links.user.js
+          generate_release_notes: true
+          fail_on_unmatched_files: true
