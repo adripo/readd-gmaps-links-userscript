@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Re-introduce Google Maps Links to Search Page
 // @namespace    https://github.com/adripo/readd-gmaps-links-userscript
-// @version      1.1.3
+// @version      1.1.4
 // @description  Readds Google Maps link to the search page and makes map thumbnail clickable. Configurable position.
 // @author       adripo
 // @license      MIT
