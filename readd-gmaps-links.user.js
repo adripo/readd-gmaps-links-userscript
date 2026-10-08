@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Re-introduce Google Maps Links to Search Page
 // @namespace    https://github.com/adripo/readd-gmaps-links-userscript
-// @version      1.1.0
+// @version      1.1.1
 // @description  Readds Google Maps link to the search page and makes map thumbnail clickable. Configurable position.
 // @author       adripo
 // @match        *://*.google.com/*
@@ -286,26 +286,40 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.5);
+            background: rgba(0,0,0,0.55);
+            backdrop-filter: blur(2px);
             z-index: 999999;
             display: flex;
             align-items: center;
             justify-content: center;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+        .gmaps-links-settings-overlay.visible {
+            opacity: 1;
         }
         .gmaps-links-settings-modal {
-            background: white;
+            background: #ffffff;
+            color: #202124;
             border-radius: 12px;
             padding: 24px;
             max-width: 480px;
             width: 90%;
-            max-height: 80vh;
+            max-height: 85vh;
             overflow-y: auto;
-            box-shadow: 0 4px 24px rgba(0,0,0,0.3);
+            box-shadow: 0 8px 28px rgba(0,0,0,0.28);
+            transform: scale(0.96);
+            transition: transform 0.2s ease;
+            box-sizing: border-box;
+        }
+        .gmaps-links-settings-overlay.visible .gmaps-links-settings-modal {
+            transform: scale(1);
         }
         .gmaps-links-settings-modal h2 {
             margin: 0 0 16px 0;
             font-size: 20px;
             color: #202124;
+            font-weight: 500;
         }
         .gmaps-links-settings-modal .setting-group {
             margin-bottom: 16px;
@@ -324,13 +338,21 @@
             border: 1px solid #dadce0;
             border-radius: 6px;
             font-size: 14px;
+            background: #ffffff;
+            color: #202124;
             box-sizing: border-box;
+            outline: none;
+        }
+        .gmaps-links-settings-modal select:focus,
+        .gmaps-links-settings-modal input[type="number"]:focus {
+            border-color: #1a73e8;
         }
         .gmaps-links-settings-modal .toggle-row {
             display: flex;
             align-items: center;
             justify-content: space-between;
             padding: 6px 0;
+            cursor: pointer;
         }
         .gmaps-links-settings-modal .toggle-row span {
             font-size: 14px;
@@ -339,6 +361,7 @@
         .gmaps-links-settings-modal .toggle-row input[type="checkbox"] {
             width: 18px;
             height: 18px;
+            cursor: pointer;
             accent-color: #1a73e8;
         }
         .gmaps-links-settings-modal .button-row {
@@ -353,6 +376,8 @@
             font-size: 14px;
             cursor: pointer;
             border: none;
+            font-weight: 500;
+            transition: background-color 0.2s ease;
         }
         .gmaps-links-settings-modal .btn-save {
             background: #1a73e8;
@@ -367,6 +392,87 @@
         }
         .gmaps-links-settings-modal .btn-reset:hover {
             background: #e8eaed;
+        }
+
+        /* Dark Mode Support */
+        @media (prefers-color-scheme: dark) {
+            .gmaps-links-settings-modal {
+                background: #202124;
+                color: #e8eaed;
+                border: 1px solid #3c4043;
+            }
+            .gmaps-links-settings-modal h2 {
+                color: #e8eaed;
+            }
+            .gmaps-links-settings-modal label,
+            .gmaps-links-settings-modal .toggle-row span {
+                color: #bdc1c6;
+            }
+            .gmaps-links-settings-modal select,
+            .gmaps-links-settings-modal input[type="number"] {
+                background: #303134;
+                color: #e8eaed;
+                border: 1px solid #5f6368;
+            }
+            .gmaps-links-settings-modal .btn-reset {
+                background: #303134;
+                color: #e8eaed;
+            }
+            .gmaps-links-settings-modal .btn-reset:hover {
+                background: #3c4043;
+            }
+        }
+        html[dark] .gmaps-links-settings-modal,
+        html[data-darkreader-scheme="dark"] .gmaps-links-settings-modal {
+            background: #202124;
+            color: #e8eaed;
+            border: 1px solid #3c4043;
+        }
+        html[dark] .gmaps-links-settings-modal h2,
+        html[data-darkreader-scheme="dark"] .gmaps-links-settings-modal h2 {
+            color: #e8eaed;
+        }
+        html[dark] .gmaps-links-settings-modal label,
+        html[dark] .gmaps-links-settings-modal .toggle-row span,
+        html[data-darkreader-scheme="dark"] .gmaps-links-settings-modal label,
+        html[data-darkreader-scheme="dark"] .gmaps-links-settings-modal .toggle-row span {
+            color: #bdc1c6;
+        }
+        html[dark] .gmaps-links-settings-modal select,
+        html[dark] .gmaps-links-settings-modal input[type="number"],
+        html[data-darkreader-scheme="dark"] .gmaps-links-settings-modal select,
+        html[data-darkreader-scheme="dark"] .gmaps-links-settings-modal input[type="number"] {
+            background: #303134;
+            color: #e8eaed;
+            border: 1px solid #5f6368;
+        }
+        html[dark] .gmaps-links-settings-modal .btn-reset,
+        html[data-darkreader-scheme="dark"] .gmaps-links-settings-modal .btn-reset {
+            background: #303134;
+            color: #e8eaed;
+        }
+
+        /* Non-blocking feedback toast */
+        .gmaps-links-toast {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            background: #202124;
+            color: #ffffff;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+            border: 1px solid #3c4043;
+            z-index: 1000000;
+            opacity: 0;
+            transition: all 0.25s ease;
+            pointer-events: none;
+        }
+        .gmaps-links-toast.visible {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
         }
     `);
 
@@ -658,8 +764,45 @@
         overlay.appendChild(modal);
         document.body.appendChild(overlay);
 
+        function showToast(message) {
+            const existingToast = document.querySelector('.gmaps-links-toast');
+            if (existingToast) existingToast.remove();
+
+            const toast = document.createElement('div');
+            toast.className = 'gmaps-links-toast';
+            toast.textContent = message;
+            document.body.appendChild(toast);
+
+            requestAnimationFrame(() => {
+                toast.classList.add('visible');
+            });
+
+            setTimeout(() => {
+                toast.classList.remove('visible');
+                setTimeout(() => toast.remove(), 250);
+            }, 3000);
+        }
+
+        const closeModal = () => {
+            window.removeEventListener('keydown', handleKeyDown);
+            overlay.classList.remove('visible');
+            setTimeout(() => overlay.remove(), 200);
+        };
+
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape') {
+                closeModal();
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+
         overlay.addEventListener('click', (e) => {
-            if (e.target === overlay) overlay.remove();
+            if (e.target === overlay) closeModal();
+        });
+
+        requestAnimationFrame(() => {
+            overlay.classList.add('visible');
         });
 
         document.getElementById('gmaps-settings-save').addEventListener('click', () => {
@@ -679,16 +822,16 @@
                 GM_setValue(key, value);
             }
 
-            overlay.remove();
-            alert('Settings saved. Refresh the page to apply changes.');
+            closeModal();
+            showToast('Settings saved. Refresh the page to apply changes.');
         });
 
         document.getElementById('gmaps-settings-reset').addEventListener('click', () => {
             for (const [key, value] of Object.entries(DEFAULTS)) {
                 GM_setValue(key, value);
             }
-            overlay.remove();
-            alert('Settings reset to defaults. Refresh the page to apply changes.');
+            closeModal();
+            showToast('Settings reset to defaults. Refresh the page to apply changes.');
         });
     }
 
