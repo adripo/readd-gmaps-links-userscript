@@ -1,11 +1,9 @@
-name: CI & Release Userscript
+name: CI & Auto-Release
 
 on:
   push:
     branches:
       - main
-    tags:
-      - 'v*'
   pull_request:
     branches:
       - main
@@ -15,6 +13,7 @@ permissions:
 
 jobs:
   validate:
+    if: "!contains(github.event.head_commit.message, '[skip ci]')"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -47,46 +46,47 @@ jobs:
             echo "  OK: $field"
           done
 
-      - name: Validate @version matches tag (on release tags only)
-        if: startsWith(github.ref, 'refs/tags/v')
-        run: |
-          FILE="readd-gmaps-links.user.js"
-          TAG_VERSION="${GITHUB_REF#refs/tags/v}"
-          SCRIPT_VERSION=$(grep '@version' "$FILE" | head -1 | sed 's/.*@version[[:space:]]*//' | tr -d '[:space:]')
-          if [ "$TAG_VERSION" != "$SCRIPT_VERSION" ]; then
-            echo "ERROR: Tag version ($TAG_VERSION) does not match script version ($SCRIPT_VERSION)"
-            exit 1
-          fi
-          echo "  OK: version $SCRIPT_VERSION matches tag"
-
-  build:
-    runs-on: ubuntu-latest
-    needs: validate
-    if: startsWith(github.ref, 'refs/tags/v')
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: readd-gmaps-links-user-js
-          path: readd-gmaps-links.user.js
-
   release:
+    needs: validate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && !contains(github.event.head_commit.message, '[skip ci]')
     runs-on: ubuntu-latest
-    needs: build
-    if: startsWith(github.ref, 'refs/tags/v')
     steps:
       - uses: actions/checkout@v4
-
-      - name: Download artifact
-        uses: actions/download-artifact@v4
         with:
-          name: readd-gmaps-links-user-js
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Determine & Bump Version
+        id: versioning
+        run: node .github/scripts/bump-version.js
+
+      - name: Commit version bump back to main
+        if: steps.versioning.outputs.was_bumped == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add readd-gmaps-links.user.js
+          git commit -m "chore(release): bump version to v${{ steps.versioning.outputs.version }} [skip ci]"
+          git push
+
+      - name: Create Git Tag
+        run: |
+          TAG="v${{ steps.versioning.outputs.version }}"
+          if ! git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
+            git tag "$TAG"
+            git push origin "$TAG"
+          fi
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: "v${{ steps.versioning.outputs.version }}"
+          name: "v${{ steps.versioning.outputs.version }}"
           files: |
             readd-gmaps-links.user.js
             assets/icon.png
