@@ -11,12 +11,15 @@ This is the Violentmonkey userscript version of the [Re-introduce Google Maps Li
 
 ## Features
 
+- **Zero Layout Shift**: Injected via MutationObserver before first paint so navigation tabs and elements appear instantly without jumping
+- **SPA & Dynamic Search Support**: Automatically updates map links on dynamic Google Search queries without requiring page refreshes
 - Re-adds an **"Open in Maps" tab** in the top navigation bar of Google Search results
 - Re-adds a **round "Maps" bubble button** in the filter row below the search input
 - Makes the **small map thumbnail** (right-side gallery) clickable
 - Makes the **address map** clickable with an "Open in Maps" overlay button
 - Makes the **places map** clickable with an "Open in Maps" overlay button
 - Makes the **country map** clickable with an "Open in Maps" overlay button
+- **Dark Mode Settings Panel**: Built-in dark mode support matching Google Search's theme with non-blocking feedback toasts
 
 ## Configuration
 
