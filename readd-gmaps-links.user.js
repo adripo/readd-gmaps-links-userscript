@@ -11,13 +11,10 @@
 // @updateURL    https://github.com/adripo/readd-gmaps-links-userscript/releases/latest/download/readd-gmaps-links.user.js
 // @downloadURL  https://github.com/adripo/readd-gmaps-links-userscript/releases/latest/download/readd-gmaps-links.user.js
 // @match        *://*.google.com/*
-// @match        *://*.google.*/search*
-// @match        *://*.google.*/webhp*
-// @match        *://*.google.*/
-// @include      *://*.google.*/search*
-// @include      *://*.google.*/webhp*
-// @include      *://*.google.*/
-// @include      /^https?:\/\/(?:www|maps)?\.google\.[a-z.]+\/(?:search|webhp|\?.*)?$/
+// @match        *://*.google.tld/search*
+// @match        *://*.google.tld/webhp*
+// @match        *://*.google.tld/
+// @include      /^https?:\/\/(?:www|maps)?\.google\.[^/]+?\/(?:search|webhp|\?.*)?$/
 // @grant        GM_addStyle
 // @grant        GM_getValue
 // @grant        GM_setValue
