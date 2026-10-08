@@ -16,7 +16,7 @@ jobs:
 
       - name: Validate userscript header
         run: |
-          FILE="userscript/readd-gmaps-links.user.js"
+          FILE="readd-gmaps-links.user.js"
           if [ ! -f "$FILE" ]; then
             echo "ERROR: $FILE not found"
             exit 1
@@ -47,10 +47,6 @@ jobs:
     needs: validate
     steps:
       - uses: actions/checkout@v4
-
-      - name: Copy userscript to release artifact
-        run: |
-          cp userscript/readd-gmaps-links.user.js readd-gmaps-links.user.js
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
